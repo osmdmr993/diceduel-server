@@ -28,12 +28,13 @@ let rooms = [
   { id: 'room-1', creator: 'CryptoWhale_88', betAmount: 10, isBot: true },
   { id: 'room-2', creator: 'SolanaKing', betAmount: 2.5, isBot: true },
   { id: 'room-3', creator: 'DegenTrader', betAmount: 20, isBot: true },
+  { id: 'room-4', creator: 'AlphaSeeker', betAmount: 5, isBot: true },
 ];
 
-// Dinamik Lobi Akışı: Her 8 saniyede bir odayı yenile / bot odası aç
+// Sakin ve İdeal Lobi Akışı: Her 15 saniyede bir tek bir oda güncellenir
 setInterval(() => {
-  if (rooms.length >= 6) {
-    rooms.pop(); // En eski odayı çıkar
+  if (rooms.length >= 5) {
+    rooms.pop();
   }
   const randomBot = BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)];
   const randomBet = BET_OPTIONS[Math.floor(Math.random() * BET_OPTIONS.length)];
@@ -46,7 +47,7 @@ setInterval(() => {
   });
 
   io.emit('rooms_update', rooms);
-}, 8000);
+}, 15000); // 15 saniye
 
 io.on('connection', (socket) => {
   socket.emit('rooms_update', rooms);
@@ -63,7 +64,7 @@ io.on('connection', (socket) => {
     rooms.unshift(newRoom);
     io.emit('rooms_update', rooms);
 
-    // Bot 3.5 saniye içinde maçı kabul eder
+    // Bot 3 saniyede odaya girer ve maçı başlatır
     setTimeout(() => {
       const rIndex = rooms.findIndex((r) => r.id === newRoom.id);
       if (rIndex !== -1) {
@@ -84,7 +85,7 @@ io.on('connection', (socket) => {
           winner: p1Score > p2Score ? 'Sen' : botName,
         });
       }
-    }, 3500);
+    }, 3000);
   });
 
   socket.on('disconnect', () => {
