@@ -15,34 +15,39 @@ const io = new Server(server, {
   }
 });
 
-const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8840072261:AAGPbmSnlpXjcFIzgUCOAGXDzKc38629jwM';
 const WEBAPP_URL = 'https://diceduel.fun';
 
-// Telegram Bot Webhook / Polling Basit Karşılama Motoru
-if (BOT_TOKEN) {
+// Telegram Bot Karşılama ve Başlatma Motoru
+try {
   const TelegramBot = require('node-telegram-bot-api');
   const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 
   bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
-    const firstName = msg.from.first_name || 'Oyuncu';
+    const firstName = msg.from?.first_name || 'Oyuncu';
 
-    bot.sendMessage(chatId, `🎲 **DiceDuel Gaming Hub'a Hoş Geldin, ${firstName}!**\n\n` +
+    bot.sendMessage(
+      chatId,
+      `🎲 **DiceDuel Gaming Hub'a Hoş Geldin, ${firstName}!**\n\n` +
       `🔥 Provably Fair Zar Düelloları, Yazı-Tura ve Günlük USDT Çarkı seni bekliyor.\n\n` +
       `🎁 **Günlük Ücretsiz Çark:** Her 24 saatte bir ücretsiz USDT kazan!\n` +
       `👥 **Referans Geliri:** Arkadaşlarını davet et, her oyunlarından %0.5 anında kazan.\n\n` +
-      `Aşağıdaki butona dokunarak hemen oyuna başlayabilirsin:`, {
-      parse_mode: 'Markdown',
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: '🚀 Oyunu Başlat / Play Now', web_app: { url: WEBAPP_URL } }],
-          [{ text: '📢 Resmi Duyuru Kanalı', url: 'https://t.me/diceduel_fun_bot' }]
-        ]
+      `Aşağıdaki butona dokunarak hemen oyuna başlayabilirsin:`,
+      {
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '🚀 Oyunu Başlat / Play Now', web_app: { url: WEBAPP_URL } }]
+          ]
+        }
       }
-    });
+    );
   });
 
-  console.log('🤖 Telegram Bot aktif ve dinliyor...');
+  console.log('🤖 Telegram Bot başarıyla başlatıldı ve dinliyor...');
+} catch (error) {
+  console.error('Telegram bot başlatılırken hata oluştu:', error);
 }
 
 // Canlı Oyun Odaları (P2P Memory)
@@ -68,7 +73,7 @@ io.on('connection', (socket) => {
 });
 
 app.get('/', (req, res) => {
-  res.send('🎲 DiceDuel Çoklu Oyun & Telegram Sunucusu Canlı!');
+  res.send('🎲 DiceDuel Çoklu Oyun & Telegram Bot Sunucusu Canlı!');
 });
 
 const PORT = process.env.PORT || 3001;
