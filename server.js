@@ -5,96 +5,73 @@ const cors = require('cors');
 
 const app = express();
 app.use(cors());
+app.use(express.json());
 
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: { origin: '*', methods: ['GET', 'POST'] },
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST']
+  }
 });
 
-const BOT_NAMES = [
-  'CryptoWhale_88',
-  'SolanaKing',
-  'DegenTrader',
-  'AlphaSeeker',
-  'SatoshiGhost',
-  'LuckyStrike',
-  'MoonBuster',
-  'NeonRider',
-];
+const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const WEBAPP_URL = 'https://diceduel.fun';
 
-const BET_OPTIONS = [1, 2.5, 5, 10, 20];
+// Telegram Bot Webhook / Polling Basit Karşılama Motoru
+if (BOT_TOKEN) {
+  const TelegramBot = require('node-telegram-bot-api');
+  const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 
-let rooms = [
-  { id: 'room-1', creator: 'CryptoWhale_88', betAmount: 10, isBot: true },
-  { id: 'room-2', creator: 'SolanaKing', betAmount: 2.5, isBot: true },
-  { id: 'room-3', creator: 'DegenTrader', betAmount: 20, isBot: true },
-  { id: 'room-4', creator: 'AlphaSeeker', betAmount: 5, isBot: true },
-];
+  bot.onText(/\/start/, (msg) => {
+    const chatId = msg.chat.id;
+    const firstName = msg.from.first_name || 'Oyuncu';
 
-// Sakin ve İdeal Lobi Akışı: Her 15 saniyede bir tek bir oda güncellenir
-setInterval(() => {
-  if (rooms.length >= 5) {
-    rooms.pop();
-  }
-  const randomBot = BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)];
-  const randomBet = BET_OPTIONS[Math.floor(Math.random() * BET_OPTIONS.length)];
-
-  rooms.unshift({
-    id: `room-${Date.now()}`,
-    creator: randomBot,
-    betAmount: randomBet,
-    isBot: true,
+    bot.sendMessage(chatId, `🎲 **DiceDuel Gaming Hub'a Hoş Geldin, ${firstName}!**\n\n` +
+      `🔥 Provably Fair Zar Düelloları, Yazı-Tura ve Günlük USDT Çarkı seni bekliyor.\n\n` +
+      `🎁 **Günlük Ücretsiz Çark:** Her 24 saatte bir ücretsiz USDT kazan!\n` +
+      `👥 **Referans Geliri:** Arkadaşlarını davet et, her oyunlarından %0.5 anında kazan.\n\n` +
+      `Aşağıdaki butona dokunarak hemen oyuna başlayabilirsin:`, {
+      parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '🚀 Oyunu Başlat / Play Now', web_app: { url: WEBAPP_URL } }],
+          [{ text: '📢 Resmi Duyuru Kanalı', url: 'https://t.me/diceduel_fun_bot' }]
+        ]
+      }
+    });
   });
 
-  io.emit('rooms_update', rooms);
-}, 15000); // 15 saniye
+  console.log('🤖 Telegram Bot aktif ve dinliyor...');
+}
+
+// Canlı Oyun Odaları (P2P Memory)
+let rooms = [
+  { id: 'room-1', creator: 'CryptoWhale_88', betAmount: 10 },
+  { id: 'room-2', creator: 'DegenKing_07', betAmount: 25 },
+  { id: 'room-3', creator: 'LuckyStrike', betAmount: 5 }
+];
 
 io.on('connection', (socket) => {
   socket.emit('rooms_update', rooms);
 
-  socket.on('create_room', ({ creator, betAmount }) => {
+  socket.on('create_room', (data) => {
     const newRoom = {
       id: `room-${Date.now()}`,
-      creator: creator || 'Anonim',
-      betAmount: Number(betAmount),
-      isBot: false,
-      socketId: socket.id,
+      creator: data.creator || 'Anonim',
+      betAmount: data.betAmount || 5
     };
-
     rooms.unshift(newRoom);
-    io.emit('rooms_update', rooms);
-
-    // Bot 3 saniyede odaya girer ve maçı başlatır
-    setTimeout(() => {
-      const rIndex = rooms.findIndex((r) => r.id === newRoom.id);
-      if (rIndex !== -1) {
-        const botName = BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)];
-        const p1Score = Math.floor(Math.random() * 100) + 1;
-        let p2Score = Math.floor(Math.random() * 100) + 1;
-        while (p1Score === p2Score) p2Score = Math.floor(Math.random() * 100) + 1;
-
-        rooms.splice(rIndex, 1);
-        io.emit('rooms_update', rooms);
-
-        io.to(newRoom.socketId).emit('game_started', {
-          roomId: newRoom.id,
-          opponent: botName,
-          betAmount: newRoom.betAmount,
-          p1Score,
-          p2Score,
-          winner: p1Score > p2Score ? 'Sen' : botName,
-        });
-      }
-    }, 3000);
-  });
-
-  socket.on('disconnect', () => {
-    rooms = rooms.filter((r) => r.socketId !== socket.id);
+    if (rooms.length > 8) rooms.pop();
     io.emit('rooms_update', rooms);
   });
 });
 
-app.get('/', (req, res) => res.send('DiceDuel Canlı Lobi Aktif 🎲'));
+app.get('/', (req, res) => {
+  res.send('🎲 DiceDuel Çoklu Oyun & Telegram Sunucusu Canlı!');
+});
 
-const PORT = process.env.PORT || 4000;
-server.listen(PORT, () => console.log(`Sunucu ${PORT} portunda çalışıyor.`));
+const PORT = process.env.PORT || 3001;
+server.listen(PORT, () => {
+  console.log(`Sunucu ${PORT} portunda çalışıyor.`);
+});
